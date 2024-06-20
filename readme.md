@@ -1,4 +1,4 @@
-# UTXO Management Project
+# Rune-Ordinals-Toolbox-bitcoinjs-lib
 
 This guide provides explaining how to utilize them effectively for managing UTXOs (Unspent Transaction Outputs) in a Bitcoin-based application.
 
