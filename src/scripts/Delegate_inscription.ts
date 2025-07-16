@@ -30,9 +30,9 @@ const ECPair: ECPairAPI = ECPairFactory(ecc);
 // const networkType: string = networkConfig.networkType;
 // const wallet = new SeedWallet({ networkType: networkType, seed: seed });
 
-const privateKey: string = process.env.PRIVATE_KEY as string;
-const networkType: string = networkConfig.networkType;
-const wallet = new WIFWallet({ networkType: networkType, privateKey: privateKey });
+const privateKey: string = process.env['PRIVATE_KEY'] as string;
+const networkType: string = networkConfig.getNetworkConfig().networkType;
+const wallet = new WIFWallet({ networkType: networkType as 'mainnet' | 'testnet', privateKey: privateKey });
 
 const txhash: string = 'dd476bdd2039161c50196d9a8f8412d56be3710de8bda5de4674429e5f8e3649';
 const txidBuffer = Buffer.from(txhash, 'hex');
@@ -47,14 +47,14 @@ export function createdelegateInscriptionTapScript(): Array<Buffer> {
   const keyPair = wallet.ecPair;
   const delegateOrdinalStacks: any = [
     toXOnly(keyPair.publicKey),
-    opcodes.OP_CHECKSIG,
-    opcodes.OP_FALSE,
-    opcodes.OP_IF,
+    opcodes['OP_CHECKSIG'],
+    opcodes['OP_FALSE'],
+    opcodes['OP_IF'],
     Buffer.from("ord", "utf8"),
     1,
     11,
     delegateBuffer,
-    opcodes.OP_ENDIF,
+    opcodes['OP_ENDIF'],
   ];
   return delegateOrdinalStacks;
 }
@@ -85,6 +85,9 @@ async function delegateInscribe() {
   console.log("send coin to address", address);
 
   const utxos = await waitUntilUTXO(address as string);
+  if (!utxos[0]) {
+    throw new Error("No UTXOs found");
+  }
   console.log(`Using UTXO ${utxos[0].txid}:${utxos[0].vout}`);
 
   const psbt = new Psbt({ network });
@@ -98,7 +101,7 @@ async function delegateInscribe() {
       {
         leafVersion: redeem.redeemVersion,
         script: redeem.output,
-        controlBlock: ordinal_p2tr.witness![ordinal_p2tr.witness!.length - 1],
+        controlBlock: ordinal_p2tr.witness?.[ordinal_p2tr.witness.length - 1] || Buffer.alloc(0),
       },
     ],
   });
@@ -177,7 +180,7 @@ export async function broadcast(txHex: string) {
 function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer {
   return crypto.taggedHash(
     "TapTweak",
-    Buffer.concat(h ? [pubKey, h] : [pubKey])
+    Buffer.concat(h ? [pubKey as any, h as any] : [pubKey as any])
   );
 }
 function toXOnly(pubkey: Buffer): Buffer {
@@ -191,7 +194,7 @@ function tweakSigner(signer: any, opts: any = {}) {
   if (signer.publicKey[0] === 3) {
     privateKey = ecc.privateNegate(privateKey);
   }
-  const tweakedPrivateKey = ecc.privateAdd(privateKey, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash));
+  const tweakedPrivateKey = ecc.privateAdd(privateKey as any, tapTweakHash(toXOnly(signer.publicKey), opts.tweakHash) as any);
   if (!tweakedPrivateKey) {
     throw new Error('Invalid tweaked private key!');
   }
